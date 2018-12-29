@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Navigator } from 'react-onsenui'
 import RoomList from './pages/RoomList';
-import * as firebase from 'firebase';
+import * as firebase from 'firebase/app';
 
 
 export interface RouteDefinition {
