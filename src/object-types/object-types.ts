@@ -8,6 +8,7 @@ export type CardChoice = keyof typeof card2component;
 
 export interface Member {
   last_seen_at: number;
+  joined_at: number;
   display_name: string;
   card_choice?: CardChoice;
 }

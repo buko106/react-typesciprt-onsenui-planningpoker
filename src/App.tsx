@@ -3,7 +3,7 @@ import { Navigator } from 'react-onsenui'
 import RoomList from './pages/RoomList';
 import * as firebase from 'firebase/app';
 import RoomDetail from './pages/RoomDetail';
-
+import uuidv4 from 'uuid/v4';
 
 export interface RouteDefinition {
   component: string;
@@ -13,10 +13,13 @@ export interface RouteDefinition {
 
 class App extends Component {
   private readonly database: firebase.database.Database;
+  private readonly myPresenceKey: string;
 
   constructor(props: {}) {
     super(props);
     this.database = firebase.database();
+    this.myPresenceKey = localStorage.getItem('myPresenceKey') || uuidv4();
+    localStorage.setItem('myPresenceKey', this.myPresenceKey);
   }
 
 
@@ -26,7 +29,8 @@ class App extends Component {
       case 'RoomList': {
         return <RoomList database={this.database} navigator={navigator}/>
       } case 'RoomDetail': {
-        return <RoomDetail roomKey={payload.roomKey} database={this.database} navigator={navigator}/>
+        return <RoomDetail myPresenceKey={this.myPresenceKey} roomKey={payload.roomKey}
+                           database={this.database} navigator={navigator}/>
       } default: {
         throw new Error('no matching root.')
       }
