@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { BackButton, List, ListHeader, ListItem, Navigator, Page, Toolbar } from 'react-onsenui';
+import { Button, Fab, Icon, Input, List, ListHeader, ListItem, Modal, Navigator, Page, Toolbar } from 'react-onsenui';
 import * as firebase from 'firebase/app';
 import 'firebase/database';
 import { Room } from '../object-types/object-types';
@@ -18,6 +18,8 @@ interface RoomStats {
 
 interface State {
   rooms: RoomStats[] | undefined;
+  isModalOpen: boolean;
+  newRoomName: string;
 }
 
 export default class RoomList extends Component<Props, State> {
@@ -25,7 +27,7 @@ export default class RoomList extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = {rooms: undefined};
+    this.state = {rooms: undefined, isModalOpen: false, newRoomName: ''};
     this.roomsRef = this.props.database.ref('/rooms');
   }
 
@@ -91,9 +93,62 @@ export default class RoomList extends Component<Props, State> {
     </Toolbar>
   );
 
+  private async createRoom() {
+    await this.roomsRef.push({
+      last_seen_at: firebase.database.ServerValue.TIMESTAMP,
+      name: this.state.newRoomName,
+    } as Room);
+    this.closeModal();
+  }
+
+  private renderNewRoomModal() {
+    const {isModalOpen} = this.state;
+    return (
+      <Modal isOpen={isModalOpen}>
+        <span onClick={() => this.closeModal()} style={{position: 'fixed', left: 20, top: 20}}>
+          <Icon icon="fa-times" size={30}/>
+        </span>
+        <div style={{textAlign: 'center', marginTop: 30}}>
+          <p>Create New Room</p>
+          <p>
+            <Input onChange={(event) => { this.setState({newRoomName: event.target.value})} }
+                   placeholder="Name" modifier="underbar" />
+          </p>
+          <p>
+            <Button disabled={this.state.newRoomName.length === 0}
+                    onClick={() => this.createRoom()}
+            >create</Button>
+          </p>
+        </div>
+      </Modal>
+    )
+  }
+
+  private openModal() {
+    this.setState({
+      isModalOpen: true,
+      newRoomName: '',
+    })
+  }
+
+  private closeModal() {
+    this.setState({
+      isModalOpen: false,
+      newRoomName: '',
+    })
+  }
+
   render() {
     return (
-      <Page renderToolbar={this.renderToolbar}>
+      <Page renderToolbar={this.renderToolbar} renderFixed={() => (
+        <>
+          {this.state.isModalOpen ? null :
+            <Fab position="bottom right" ripple={true} onClick={() => this.openModal()}>
+              <Icon icon="fa-plus"/>
+            </Fab>}
+          {this.renderNewRoomModal()}
+        </>
+      )}>
         <List>
           <ListHeader>header</ListHeader>
           {this.renderRooms()}
