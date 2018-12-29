@@ -1,8 +1,19 @@
 import * as React from 'react';
 import { Component } from 'react';
 import * as firebase from 'firebase/app';
-import { Member, Room } from '../object-types/object-types';
-import { BackButton, List, ListItem, Navigator, Page, Toolbar } from 'react-onsenui';
+import { card2component, CARD_CHOICES, CardChoice, Member, Room } from '../object-types/object-types';
+import {
+  BackButton,
+  Fab,
+  Icon,
+  List,
+  ListItem,
+  Navigator,
+  Page,
+  SpeedDial,
+  SpeedDialItem,
+  Toolbar
+} from 'react-onsenui';
 import { interval, Subscription } from 'rxjs';
 import { getTimeOffsetFromDatabaseAsync } from './utils';
 
@@ -53,8 +64,8 @@ export default class RoomDetail extends Component<Props, State> {
       last_seen_at: firebase.database.ServerValue.TIMESTAMP,
       joined_at: firebase.database.ServerValue.TIMESTAMP,
       display_name: 'todo(name)',
-      card_choice: 'one',
-    } as Member);
+      card_choice: '',
+    });
 
     this.intervalSubscription = interval(1000).subscribe(() => {
       this.myPresenceRef.update({
@@ -74,6 +85,15 @@ export default class RoomDetail extends Component<Props, State> {
     }
   }
 
+  private async setMyChoice(choice: CardChoice | undefined) {
+    (document.getElementById('RoomDetail__SpeedDial')! as any).hideItems();
+    if (choice != null) {
+      await this.myPresenceRef.child('card_choice').set(choice);
+    } else {
+      await this.myPresenceRef.child('card_choice').set('');
+    }
+  }
+
   private renderToolbar = () => {
     const roomName = this.state.room ? this.state.room.name : '';
 
@@ -86,6 +106,24 @@ export default class RoomDetail extends Component<Props, State> {
           Room Detail {roomName}
         </div>
       </Toolbar>
+    )
+  };
+
+  private renderSpeedDial() {
+    return (
+      <SpeedDial id="RoomDetail__SpeedDial" direction="up" position="bottom right">
+        <Fab>
+          <Icon icon="fa-caret-up" />
+        </Fab>
+        <SpeedDialItem onClick={() => this.setMyChoice(undefined)}>
+          <Icon icon="fa-trash" />
+        </SpeedDialItem>
+        {CARD_CHOICES.map(choice => (
+          <SpeedDialItem onClick={() => this.setMyChoice(choice)}>
+            <span>{card2component[choice]}</span>
+          </SpeedDialItem>
+        ))}
+      </SpeedDial>
     )
   };
 
@@ -127,7 +165,7 @@ export default class RoomDetail extends Component<Props, State> {
 
   render() {
     return (
-      <Page renderToolbar={this.renderToolbar}>
+      <Page renderToolbar={this.renderToolbar} renderFixed={() => this.renderSpeedDial()}>
         {this.renderList()}
       </Page>
     );
