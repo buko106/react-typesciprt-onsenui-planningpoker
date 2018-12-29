@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Navigator } from 'react-onsenui'
 import RoomList from './pages/RoomList';
 import * as firebase from 'firebase/app';
+import RoomDetail from './pages/RoomDetail';
 
 
 export interface RouteDefinition {
@@ -24,6 +25,8 @@ class App extends Component {
     switch (component) {
       case 'RoomList': {
         return <RoomList database={this.database} navigator={navigator}/>
+      } case 'RoomDetail': {
+        return <RoomDetail roomKey={payload.roomKey} database={this.database} navigator={navigator}/>
       } default: {
         throw new Error('no matching root.')
       }

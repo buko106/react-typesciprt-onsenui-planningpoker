@@ -65,11 +65,19 @@ export default class RoomList extends Component<Props, State> {
 
     return (
       <>
-        {rooms.map((room: RoomStats) => (
-          <ListItem key={room.key} onClick={() => {this.props.navigator!.pushPage({component: 'RoomList'} as RouteDefinition)}}>
-            {room.key} / {room.name} / {room.activeMemberCount}
-          </ListItem>
-        ))}
+        {rooms.map((room: RoomStats) => {
+          const route: RouteDefinition = {
+            component: 'RoomDetail',
+            payload: {
+              roomKey: room.key,
+            },
+          };
+          return (
+            <ListItem key={room.key} onClick={() => {this.props.navigator!.pushPage(route)}}>
+              {room.key} / {room.name} / {room.activeMemberCount}
+            </ListItem>
+          )
+        })}
       </>
     )
   }
@@ -78,7 +86,7 @@ export default class RoomList extends Component<Props, State> {
   private renderToolbar = () => (
     <Toolbar>
       <div className="center">
-        Title
+        Room List
       </div>
     </Toolbar>
   );
