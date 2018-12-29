@@ -3,7 +3,7 @@ import { Component } from 'react';
 import * as firebase from 'firebase/app';
 import { card2component, CARD_CHOICES, CardChoice, Member, Room } from '../object-types/object-types';
 import {
-  BackButton,
+  BackButton, Button,
   Fab,
   Icon,
   List,
@@ -11,11 +11,15 @@ import {
   Navigator,
   Page,
   SpeedDial,
-  SpeedDialItem,
+  SpeedDialItem, Toast,
   Toolbar
 } from 'react-onsenui';
 import { interval, Subscription } from 'rxjs';
 import { getTimeOffsetFromDatabaseAsync } from './utils';
+
+interface MemberStats extends Member {
+  key: string;
+}
 
 interface Props {
   roomKey: string;
@@ -25,12 +29,11 @@ interface Props {
 }
 
 interface State {
-  room: Room | undefined;
+  activeMembers: MemberStats[];
+  roomName: string;
+  revealed: boolean;
 }
 
-interface MemberStats extends Member {
-  key: string;
-}
 
 export default class RoomDetail extends Component<Props, State> {
   private readonly roomRef: firebase.database.Reference;
@@ -38,7 +41,7 @@ export default class RoomDetail extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = {room: undefined};
+    this.state = {roomName: '', activeMembers: [], revealed: false};
 
     const {database, roomKey, myPresenceKey} = props;
     this.roomRef =  database.ref(`/rooms/${roomKey}`);
@@ -49,14 +52,41 @@ export default class RoomDetail extends Component<Props, State> {
   private serverTimeOffset: number = 0;
 
   async componentDidMount() {
-    this.roomRef.on('value', snapshot => {
+    this.roomRef.child('name').on('value', snapshot => {
+      if (snapshot == null) {
+        return;
+      }
+      this.setState({roomName: snapshot.val()});
+    });
+
+    this.roomRef.child('revealed').on('value', snapshot => {
+      if (snapshot == null) {
+        return;
+      }
+      this.setState({revealed: snapshot.val()});
+    });
+
+    this.roomRef.child('members').orderByChild('joined_at').on('value', snapshot => {
       if (snapshot == null) {
         return;
       }
 
-      const room = snapshot.toJSON() as Room;
-      this.setState({room});
+      const members: MemberStats[] = [];
+      snapshot.forEach(member => {
+        members.push({
+          ...(member.toJSON() as Member),
+          key: member.key as string
+        });
+      });
+
+      const serverTimestamp = new Date().getTime() + this.serverTimeOffset;  // TODO: make server timestamp singleton object
+      const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60;  // 1 min.  TODO: fix duplication of definition
+      const activeMembers = members.filter(member =>
+        member.last_seen_at >= serverTimestamp - MEMBER_INACTIVITY_THRESHOLD_MILLISECOND
+      );
+      this.setState({activeMembers});
     });
+
     this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(this.props.database);
 
     await this.myPresenceRef.remove();
@@ -94,16 +124,28 @@ export default class RoomDetail extends Component<Props, State> {
     }
   }
 
-  private renderToolbar = () => {
-    const roomName = this.state.room ? this.state.room.name : '';
+  private async revealChoices(positive: boolean = true) {
+    await this.roomRef.child('revealed').set(positive);
+  }
 
+  private async resetAllChoices() {
+    const snapshot = await this.roomRef.child('members').once('value');
+    const resetPromises: Array<Promise<void>> = [];
+    snapshot.forEach(memberRef => {
+      resetPromises.push(memberRef.child('card_choice').ref.set(''));
+    });
+    await Promise.all(resetPromises);
+    await this.revealChoices(false);
+  }
+
+  private renderToolbar = () => {
     return (
       <Toolbar>
         <div className="left">
           <BackButton onClick={() => this.props.navigator!.popPage()}/>
         </div>
         <div className="center">
-          Room Detail {roomName}
+          Room Detail {this.state.roomName}
         </div>
       </Toolbar>
     )
@@ -119,7 +161,7 @@ export default class RoomDetail extends Component<Props, State> {
           <Icon icon="fa-trash" />
         </SpeedDialItem>
         {CARD_CHOICES.map(choice => (
-          <SpeedDialItem onClick={() => this.setMyChoice(choice)}>
+          <SpeedDialItem key={choice} onClick={() => this.setMyChoice(choice)}>
             <span>{card2component[choice]}</span>
           </SpeedDialItem>
         ))}
@@ -136,36 +178,63 @@ export default class RoomDetail extends Component<Props, State> {
       </List>
     );
 
+    const {activeMembers, revealed} = this.state;
 
-    const {room} = this.state;
-    const memberKeys: string[] = room ? Object.keys(room.members || {}) : [];
-    if (memberKeys.length == 0) {
+    if (activeMembers.length == 0) {
       return loading();
     }
 
-    const serverTimestamp = new Date().getTime() + this.serverTimeOffset;
-    const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60;  // 1 min.
-    const members = memberKeys.map(key => {
-      const member: Member = room!.members![key];
-      return {...member, key};
-    }).filter(
-      (member: MemberStats) => (member.last_seen_at >= serverTimestamp - MEMBER_INACTIVITY_THRESHOLD_MILLISECOND)
-    );
-
     return (
       <List>
-        {members.map((member: MemberStats) => (
-          <ListItem key={member.key}>
-            {member.card_choice} / {member.display_name}
-          </ListItem>
-        ))}
+        {activeMembers.map((member: MemberStats) => {
+          const cardChoice = member.card_choice;
+          let label: string;
+          if (CARD_CHOICES.indexOf(cardChoice) != -1) {
+            label = revealed ? card2component[cardChoice] : 'ready!';
+          } else {
+            label = revealed ? '(not specified)' : 'not ready';
+          }
+          return (
+            <ListItem key={member.key}>
+              {label} / {member.display_name}
+            </ListItem>
+          );
+        })}
       </List>
     );
   }
 
+  private renderToast() {
+    const {activeMembers, revealed} = this.state;
+    const isToastOpen: boolean = (
+      !revealed && activeMembers.length > 0
+       && activeMembers.every(member => !!member.card_choice)
+    );
+    return (
+      <>
+        <Toast isOpen={isToastOpen}>
+          All Members Ready!
+          <button onClick={() => this.revealChoices()}>GO</button>
+        </Toast>
+        <Toast isOpen={!!revealed}>
+          <button onClick={() => this.resetAllChoices()}>RESET</button>
+        </Toast>
+      </>
+    )
+  }
+
+  private renderFixed() {
+    return (
+      <>
+        {this.renderSpeedDial()}
+        {this.renderToast()}
+      </>
+    )
+  }
+
   render() {
     return (
-      <Page renderToolbar={this.renderToolbar} renderFixed={() => this.renderSpeedDial()}>
+      <Page renderToolbar={this.renderToolbar} renderFixed={() => this.renderFixed()}>
         {this.renderList()}
       </Page>
     );

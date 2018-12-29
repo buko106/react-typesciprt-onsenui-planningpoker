@@ -16,7 +16,7 @@ export interface Member {
   last_seen_at: number;
   joined_at: number;
   display_name: string;
-  card_choice?: CardChoice;
+  card_choice: CardChoice;
 }
 
 export interface Room {
