@@ -1,20 +1,29 @@
 import React, { Component } from 'react';
-import { List, ListHeader, ListItem, Navigator, Page, Toolbar } from 'react-onsenui'
+import { Navigator } from 'react-onsenui'
 import RoomList from './pages/RoomList';
+import * as firebase from 'firebase';
 
 
-interface RouteDefinition {
+export interface RouteDefinition {
   component: string;
   payload: any;
 }
 
 
 class App extends Component {
+  private readonly database: firebase.database.Database;
+
+  constructor(props: {}) {
+    super(props);
+    this.database = firebase.database();
+  }
+
+
   private renderPage = (route: RouteDefinition, navigator?: Navigator) => {
     const {component, payload} = route;
     switch (component) {
       case 'RoomList': {
-        return <RoomList/>
+        return <RoomList database={this.database} navigator={navigator}/>
       } default: {
         throw new Error('no matching root.')
       }

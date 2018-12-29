@@ -2,10 +2,16 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import 'onsenui/css/onsenui.css';
 import 'onsenui/css/onsen-css-components.css';
-
+import * as firebase from 'firebase/app';
 import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
+
+const config = {
+  apiKey: 'AIzaSyA1PFaN-K0s8zgKP4rDL0E5_hvmKvXC5ME\n',
+  databaseURL: 'https://buko106-planningpoker.firebaseio.com',
+};
+firebase.initializeApp(config);
 
 ReactDOM.render(<App />, document.getElementById('root'));
 
