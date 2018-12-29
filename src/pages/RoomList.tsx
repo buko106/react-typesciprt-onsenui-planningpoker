@@ -14,6 +14,7 @@ interface Props {
 interface RoomStats {
   name: string,
   key: string,
+  lastSeenAt: number,
   activeMemberCount: number,
 }
 
@@ -36,17 +37,26 @@ export default class RoomList extends Component<Props, State> {
   async componentDidMount() {
     this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(this.props.database);
 
-    this.roomsRef.on('value', snapshot => {
+    const ROOM_INACTIVITY_THRESHOLD_MILLISECOND = 3 * 60 * 1000;  // 3 min.
+    this.roomsRef
+    .startAt(new Date().getTime() + this.serverTimeOffset - ROOM_INACTIVITY_THRESHOLD_MILLISECOND)
+    .orderByChild('last_seen_at')
+    .on('value', snapshot => {
       if (snapshot == null) {
         this.setState({rooms: undefined});
         return;
       }
 
+      const roomKeys: string[] = [];
+      snapshot.forEach(roomRef => {
+        roomKeys.push(roomRef.key as string);
+      });
+      roomKeys.reverse();
+
       const rooms = snapshot.toJSON() as {[key in string]: Room};
-      const roomKeys: string[] = Object.keys(rooms);
 
       const serverTimestamp = new Date().getTime() + this.serverTimeOffset;  // TODO: make server timestamp singleton object
-      const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000;  // 1 sec.
+      const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60;  // 1 min.  TODO: fix duplication of definition
 
       this.setState({
         rooms: roomKeys.map(key => {
@@ -61,6 +71,7 @@ export default class RoomList extends Component<Props, State> {
 
           return {
             key, activeMemberCount, name: rooms[key].name,
+            lastSeenAt: rooms[key].last_seen_at,
           } as RoomStats
         })
       })
@@ -71,11 +82,22 @@ export default class RoomList extends Component<Props, State> {
     const {rooms} = this.state;
 
     if (rooms == null) {
-      return null;
+      return (
+        <ListItem key="loading">
+          Loading...
+        </ListItem>
+      );
+    } else if (rooms.length == 0) {
+      return (
+        <ListItem key="no-active-room">
+          アクティブな部屋がありません
+        </ListItem>
+      );
     }
 
     return (
       <>
+        <ListHeader>ACTIVE ROOMS</ListHeader>
         {rooms.map((room: RoomStats) => {
           const route: RouteDefinition = {
             component: 'RoomDetail',
@@ -85,7 +107,7 @@ export default class RoomList extends Component<Props, State> {
           };
           return (
             <ListItem key={room.key} onClick={() => {this.props.navigator!.pushPage(route)}}>
-              {room.key} / {room.name} / {room.activeMemberCount}
+              {room.name} / {room.activeMemberCount}人
             </ListItem>
           )
         })}
@@ -159,7 +181,6 @@ export default class RoomList extends Component<Props, State> {
         </>
       )}>
         <List>
-          <ListHeader>header</ListHeader>
           {this.renderRooms()}
         </List>
       </Page>

@@ -48,6 +48,7 @@ export default class RoomDetail extends Component<Props, State> {
     });
     this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(this.props.database);
 
+    await this.myPresenceRef.remove();
     await this.myPresenceRef.set({
       last_seen_at: firebase.database.ServerValue.TIMESTAMP,
       joined_at: firebase.database.ServerValue.TIMESTAMP,
@@ -58,7 +59,10 @@ export default class RoomDetail extends Component<Props, State> {
     this.intervalSubscription = interval(1000).subscribe(() => {
       this.myPresenceRef.update({
         last_seen_at: firebase.database.ServerValue.TIMESTAMP,
-      } as Partial<Member>)
+      } as Partial<Member>);
+      this.roomRef.update({
+        last_seen_at: firebase.database.ServerValue.TIMESTAMP,
+      } as Partial<Room>)
     });
   }
 
@@ -102,7 +106,7 @@ export default class RoomDetail extends Component<Props, State> {
     }
 
     const serverTimestamp = new Date().getTime() + this.serverTimeOffset;
-    const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000;  // 1 sec.
+    const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60;  // 1 min.
     const members = memberKeys.map(key => {
       const member: Member = room!.members![key];
       return {...member, key};
