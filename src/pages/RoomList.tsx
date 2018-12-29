@@ -4,6 +4,7 @@ import * as firebase from 'firebase/app';
 import 'firebase/database';
 import { Room } from '../object-types/object-types';
 import { RouteDefinition } from '../App';
+import { getTimeOffsetFromDatabaseAsync } from './utils';
 
 interface Props {
   database: firebase.database.Database;
@@ -24,6 +25,7 @@ interface State {
 
 export default class RoomList extends Component<Props, State> {
   private readonly roomsRef: firebase.database.Reference;
+  private serverTimeOffset: number = 0;
 
   constructor(props: Props) {
     super(props);
@@ -31,7 +33,9 @@ export default class RoomList extends Component<Props, State> {
     this.roomsRef = this.props.database.ref('/rooms');
   }
 
-  componentDidMount() {
+  async componentDidMount() {
+    this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(this.props.database);
+
     this.roomsRef.on('value', snapshot => {
       if (snapshot == null) {
         this.setState({rooms: undefined});
@@ -41,13 +45,18 @@ export default class RoomList extends Component<Props, State> {
       const rooms = snapshot.toJSON() as {[key in string]: Room};
       const roomKeys: string[] = Object.keys(rooms);
 
+      const serverTimestamp = new Date().getTime() + this.serverTimeOffset;  // TODO: make server timestamp singleton object
+      const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000;  // 1 sec.
 
       this.setState({
         rooms: roomKeys.map(key => {
           const room = rooms[key];
           let activeMemberCount = 0;
           if (room.members != null) {
-            activeMemberCount = Object.keys(room.members).length; // TODO: filter out nonactive member
+            const memberKeys = Object.keys(room.members);
+            activeMemberCount = memberKeys.filter(
+              key => room.members![key].last_seen_at >= serverTimestamp - MEMBER_INACTIVITY_THRESHOLD_MILLISECOND
+            ).length;
           }
 
           return {
