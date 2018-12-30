@@ -14,6 +14,7 @@ import {
   Page,
   Toolbar,
 } from 'react-onsenui';
+import { interval, Subscription } from 'rxjs';
 import { RouteDefinition } from '../App';
 import { Room } from '../object-types/object-types';
 import { getTimeOffsetFromDatabaseAsync } from './utils';
@@ -40,6 +41,7 @@ interface State {
 export default class RoomList extends Component<Props, State> {
   private readonly roomsRef: firebase.database.Reference;
   private serverTimeOffset: number = 0;
+  private forceUpdateSubscription?: Subscription;
 
   constructor(props: Props) {
     super(props);
@@ -53,6 +55,10 @@ export default class RoomList extends Component<Props, State> {
   }
 
   public async componentDidMount() {
+    this.forceUpdateSubscription = interval(1000).subscribe(() => {
+      this.forceUpdate();
+    });
+
     this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(
       this.props.database
     );
@@ -104,6 +110,12 @@ export default class RoomList extends Component<Props, State> {
           }),
         });
       });
+  }
+
+  public componentWillUnmount() {
+    if (this.forceUpdateSubscription) {
+      this.forceUpdateSubscription.unsubscribe();
+    }
   }
 
   public render() {
