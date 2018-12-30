@@ -228,7 +228,9 @@ export default class RoomList extends Component<Props, State> {
 
   private renderNameInputItem() {
     const onChange = (e: React.ChangeEvent<any>) => {
-      this.setState({ userName: e.target.value });
+      const userName: string = e.target.value;
+      localStorage.setItem('myName', userName);
+      this.setState({ userName });
     };
 
     return (
