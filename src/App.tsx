@@ -29,7 +29,7 @@ class App extends Component {
       case 'RoomList': {
         return <RoomList database={this.database} navigator={navigator}/>
       } case 'RoomDetail': {
-        return <RoomDetail myPresenceKey={this.myPresenceKey} roomKey={payload.roomKey}
+        return <RoomDetail myPresenceKey={this.myPresenceKey} roomKey={payload.roomKey} myName={payload.myName}
                            database={this.database} navigator={navigator}/>
       } default: {
         throw new Error('no matching root.')

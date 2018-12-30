@@ -24,6 +24,7 @@ interface MemberStats extends Member {
 interface Props {
   roomKey: string;
   myPresenceKey: string;
+  myName: string;
   database: firebase.database.Database;
   navigator?: Navigator;
 }
@@ -93,7 +94,7 @@ export default class RoomDetail extends Component<Props, State> {
     await this.myPresenceRef.set({
       last_seen_at: firebase.database.ServerValue.TIMESTAMP,
       joined_at: firebase.database.ServerValue.TIMESTAMP,
-      display_name: 'todo(name)',
+      display_name: this.props.myName,
       card_choice: '',
     });
 

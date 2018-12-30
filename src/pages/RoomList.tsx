@@ -22,6 +22,7 @@ interface State {
   rooms: RoomStats[] | undefined;
   isModalOpen: boolean;
   newRoomName: string;
+  userName: string;
 }
 
 export default class RoomList extends Component<Props, State> {
@@ -30,7 +31,12 @@ export default class RoomList extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = {rooms: undefined, isModalOpen: false, newRoomName: ''};
+    this.state = {
+      rooms: undefined,
+      isModalOpen: false,
+      newRoomName: '',
+      userName: localStorage.getItem('myName') || ''
+    };
     this.roomsRef = this.props.database.ref('/rooms');
   }
 
@@ -78,6 +84,17 @@ export default class RoomList extends Component<Props, State> {
     });
   }
 
+  private async onClickRoom(key: string) {
+    const route: RouteDefinition = {
+      component: 'RoomDetail',
+      payload: {
+        roomKey: key,
+        myName: this.state.userName,
+      },
+    };
+    await this.props.navigator!.pushPage(route)
+  }
+
   private renderRooms() {
     const {rooms} = this.state;
 
@@ -89,9 +106,12 @@ export default class RoomList extends Component<Props, State> {
       );
     } else if (rooms.length == 0) {
       return (
-        <ListItem key="no-active-room">
-          アクティブな部屋がありません
-        </ListItem>
+        <>
+          <ListHeader>ACTIVE ROOMS</ListHeader>
+          <ListItem key="no-active-room">
+            アクティブな部屋がありません
+          </ListItem>
+        </>
       );
     }
 
@@ -99,14 +119,8 @@ export default class RoomList extends Component<Props, State> {
       <>
         <ListHeader>ACTIVE ROOMS</ListHeader>
         {rooms.map((room: RoomStats) => {
-          const route: RouteDefinition = {
-            component: 'RoomDetail',
-            payload: {
-              roomKey: room.key,
-            },
-          };
           return (
-            <ListItem key={room.key} onClick={() => {this.props.navigator!.pushPage(route)}}>
+            <ListItem key={room.key} onClick={() => {this.onClickRoom(room.key)}}>
               {room.name} / {room.activeMemberCount}人
             </ListItem>
           )
@@ -143,7 +157,7 @@ export default class RoomList extends Component<Props, State> {
           <p>Create New Room</p>
           <p>
             <Input onChange={(event) => { this.setState({newRoomName: event.target.value})} }
-                   placeholder="Name" modifier="underbar" />
+                   placeholder="Name" modifier="underbar" value={this.state.newRoomName}/>
           </p>
           <p>
             <Button disabled={this.state.newRoomName.length === 0}
@@ -153,6 +167,23 @@ export default class RoomList extends Component<Props, State> {
         </div>
       </Modal>
     )
+  }
+
+  private renderNameInputItem() {
+    const onChange = (e: React.ChangeEvent<any>) => {
+      this.setState({userName: e.target.value});
+    };
+
+    return (
+      <>
+        <ListHeader>
+          What's your name?
+        </ListHeader>
+        <ListItem>
+          <Input value={this.state.userName} modifier="underbar" onChange={onChange}/>
+        </ListItem>
+      </>
+    );
   }
 
   private openModal() {
@@ -181,6 +212,7 @@ export default class RoomList extends Component<Props, State> {
         </>
       )}>
         <List>
+          {this.renderNameInputItem()}
           {this.renderRooms()}
         </List>
       </Page>
