@@ -2,13 +2,22 @@
   "rulesDirectory": [ "tslint-plugin-prettier" ],
   "extends": [
     "tslint:latest",
+    "tslint-react",
     "tslint-config-prettier"
   ],
   "rules": {
+    "no-submodule-imports": [true, "firebase", "uuid", "onsenui/css"],
+    "interface-name" : [true, "never-prefix"],
+    "object-literal-sort-keys": false,
+    "jsx-no-lambda": false,
+    "triple-equals": [true, "allow-null-check"],
+    "prefer-conditional-expression": false,
+    "no-object-literal-type-assertion": false,
     "prettier": [
       true,
       {
-        "singleQuote": true
+        "singleQuote": true,
+        "trailingComma": "es5"
       }
     ]
   }

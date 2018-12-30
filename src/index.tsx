@@ -1,10 +1,10 @@
+import * as firebase from 'firebase/app';
+import 'onsenui/css/onsen-css-components.css';
+import 'onsenui/css/onsenui.css';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import 'onsenui/css/onsenui.css';
-import 'onsenui/css/onsen-css-components.css';
-import * as firebase from 'firebase/app';
-import './index.css';
 import App from './App';
+import './index.css';
 import * as serviceWorker from './serviceWorker';
 
 const config = {

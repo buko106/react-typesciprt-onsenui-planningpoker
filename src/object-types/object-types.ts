@@ -1,4 +1,3 @@
-
 export const card2component = {
   zero: '0',
   half: '0.5',
@@ -22,5 +21,5 @@ export interface Member {
 export interface Room {
   last_seen_at: number;
   name: string;
-  members?: {[key in string]: Member};
+  members?: { [key in string]: Member };
 }

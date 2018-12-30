@@ -1,9 +1,7 @@
-import * as React from 'react';
-import { Component } from 'react';
 import * as firebase from 'firebase/app';
-import { card2component, CARD_CHOICES, CardChoice, Member, Room } from '../object-types/object-types';
+import React, { Component } from 'react';
 import {
-  BackButton, Button,
+  BackButton,
   Fab,
   Icon,
   List,
@@ -11,10 +9,17 @@ import {
   Navigator,
   Page,
   SpeedDial,
-  SpeedDialItem, Toast,
-  Toolbar
+  SpeedDialItem,
+  Toast,
+  Toolbar,
 } from 'react-onsenui';
 import { interval, Subscription } from 'rxjs';
+import {
+  card2component,
+  CARD_CHOICES,
+  CardChoice,
+  Member,
+} from '../object-types/object-types';
 import { getTimeOffsetFromDatabaseAsync } from './utils';
 
 interface MemberStats extends Member {
@@ -35,60 +40,66 @@ interface State {
   revealed: boolean;
 }
 
-
 export default class RoomDetail extends Component<Props, State> {
   private readonly roomRef: firebase.database.Reference;
   private readonly myPresenceRef: firebase.database.Reference;
 
-  constructor(props: Props) {
-    super(props);
-    this.state = {roomName: '', activeMembers: [], revealed: false};
-
-    const {database, roomKey, myPresenceKey} = props;
-    this.roomRef =  database.ref(`/rooms/${roomKey}`);
-    this.myPresenceRef = this.roomRef.child(`members/${myPresenceKey}`);
-  }
-
   private intervalSubscription?: Subscription;
   private serverTimeOffset: number = 0;
 
-  async componentDidMount() {
+  constructor(props: Props) {
+    super(props);
+    this.state = { roomName: '', activeMembers: [], revealed: false };
+
+    const { database, roomKey, myPresenceKey } = props;
+    this.roomRef = database.ref(`/rooms/${roomKey}`);
+    this.myPresenceRef = this.roomRef.child(`members/${myPresenceKey}`);
+  }
+
+  public async componentDidMount() {
     this.roomRef.child('name').on('value', snapshot => {
       if (snapshot == null) {
         return;
       }
-      this.setState({roomName: snapshot.val()});
+      this.setState({ roomName: snapshot.val() });
     });
 
     this.roomRef.child('revealed').on('value', snapshot => {
       if (snapshot == null) {
         return;
       }
-      this.setState({revealed: snapshot.val()});
+      this.setState({ revealed: snapshot.val() });
     });
 
-    this.roomRef.child('members').orderByChild('joined_at').on('value', snapshot => {
-      if (snapshot == null) {
-        return;
-      }
+    this.roomRef
+      .child('members')
+      .orderByChild('joined_at')
+      .on('value', snapshot => {
+        if (snapshot == null) {
+          return;
+        }
 
-      const members: MemberStats[] = [];
-      snapshot.forEach(member => {
-        members.push({
-          ...(member.toJSON() as Member),
-          key: member.key as string
+        const members: MemberStats[] = [];
+        snapshot.forEach(member => {
+          members.push({
+            ...(member.toJSON() as Member),
+            key: member.key as string,
+          });
         });
+
+        const serverTimestamp = new Date().getTime() + this.serverTimeOffset; // TODO: make server timestamp singleton object
+        const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60; // 1 min.  TODO: fix duplication of definition
+        const activeMembers = members.filter(
+          member =>
+            member.last_seen_at >=
+            serverTimestamp - MEMBER_INACTIVITY_THRESHOLD_MILLISECOND
+        );
+        this.setState({ activeMembers });
       });
 
-      const serverTimestamp = new Date().getTime() + this.serverTimeOffset;  // TODO: make server timestamp singleton object
-      const MEMBER_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60;  // 1 min.  TODO: fix duplication of definition
-      const activeMembers = members.filter(member =>
-        member.last_seen_at >= serverTimestamp - MEMBER_INACTIVITY_THRESHOLD_MILLISECOND
-      );
-      this.setState({activeMembers});
-    });
-
-    this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(this.props.database);
+    this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(
+      this.props.database
+    );
 
     await this.myPresenceRef.remove();
     await this.myPresenceRef.set({
@@ -101,19 +112,30 @@ export default class RoomDetail extends Component<Props, State> {
     this.intervalSubscription = interval(1000).subscribe(() => {
       this.myPresenceRef.update({
         last_seen_at: firebase.database.ServerValue.TIMESTAMP,
-      } as Partial<Member>);
+      });
       this.roomRef.update({
         last_seen_at: firebase.database.ServerValue.TIMESTAMP,
-      } as Partial<Room>)
+      });
     });
   }
 
-  componentWillUnmount() {
+  public componentWillUnmount() {
     this.roomRef.off();
     this.myPresenceRef.remove();
     if (this.intervalSubscription) {
       this.intervalSubscription.unsubscribe();
     }
+  }
+
+  public render() {
+    return (
+      <Page
+        renderToolbar={this.renderToolbar}
+        renderFixed={() => this.renderFixed()}
+      >
+        {this.renderList()}
+      </Page>
+    );
   }
 
   private async setMyChoice(choice: CardChoice | undefined) {
@@ -143,18 +165,20 @@ export default class RoomDetail extends Component<Props, State> {
     return (
       <Toolbar>
         <div className="left">
-          <BackButton onClick={() => this.props.navigator!.popPage()}/>
+          <BackButton onClick={() => this.props.navigator!.popPage()} />
         </div>
-        <div className="center">
-          Room Detail {this.state.roomName}
-        </div>
+        <div className="center">Room Detail {this.state.roomName}</div>
       </Toolbar>
-    )
+    );
   };
 
   private renderSpeedDial() {
     return (
-      <SpeedDial id="RoomDetail__SpeedDial" direction="up" position="bottom right">
+      <SpeedDial
+        id="RoomDetail__SpeedDial"
+        direction="up"
+        position="bottom right"
+      >
         <Fab>
           <Icon icon="fa-caret-up" />
         </Fab>
@@ -167,21 +191,18 @@ export default class RoomDetail extends Component<Props, State> {
           </SpeedDialItem>
         ))}
       </SpeedDial>
-    )
-  };
-
+    );
+  }
   private renderList() {
     const loading = () => (
       <List>
-        <ListItem>
-          読み込み中...
-        </ListItem>
+        <ListItem>読み込み中...</ListItem>
       </List>
     );
 
-    const {activeMembers, revealed} = this.state;
+    const { activeMembers, revealed } = this.state;
 
-    if (activeMembers.length == 0) {
+    if (activeMembers.length === 0) {
       return loading();
     }
 
@@ -190,7 +211,7 @@ export default class RoomDetail extends Component<Props, State> {
         {activeMembers.map((member: MemberStats) => {
           const cardChoice = member.card_choice;
           let label: string;
-          if (CARD_CHOICES.indexOf(cardChoice) != -1) {
+          if (CARD_CHOICES.indexOf(cardChoice) !== -1) {
             label = revealed ? card2component[cardChoice] : 'ready!';
           } else {
             label = revealed ? '(not specified)' : 'not ready';
@@ -206,11 +227,11 @@ export default class RoomDetail extends Component<Props, State> {
   }
 
   private renderToast() {
-    const {activeMembers, revealed} = this.state;
-    const isToastOpen: boolean = (
-      !revealed && activeMembers.length > 0
-       && activeMembers.every(member => !!member.card_choice)
-    );
+    const { activeMembers, revealed } = this.state;
+    const isToastOpen: boolean =
+      !revealed &&
+      activeMembers.length > 0 &&
+      activeMembers.every(member => !!member.card_choice);
     return (
       <>
         <Toast isOpen={isToastOpen}>
@@ -221,7 +242,7 @@ export default class RoomDetail extends Component<Props, State> {
           <button onClick={() => this.resetAllChoices()}>RESET</button>
         </Toast>
       </>
-    )
+    );
   }
 
   private renderFixed() {
@@ -230,14 +251,6 @@ export default class RoomDetail extends Component<Props, State> {
         {this.renderSpeedDial()}
         {this.renderToast()}
       </>
-    )
-  }
-
-  render() {
-    return (
-      <Page renderToolbar={this.renderToolbar} renderFixed={() => this.renderFixed()}>
-        {this.renderList()}
-      </Page>
     );
   }
 }

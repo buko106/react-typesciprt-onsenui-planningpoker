@@ -1,15 +1,14 @@
-import React, { Component } from 'react';
-import { Navigator } from 'react-onsenui'
-import RoomList from './pages/RoomList';
 import * as firebase from 'firebase/app';
-import RoomDetail from './pages/RoomDetail';
+import React, { Component } from 'react';
+import { Navigator } from 'react-onsenui';
 import uuidv4 from 'uuid/v4';
+import RoomDetail from './pages/RoomDetail';
+import RoomList from './pages/RoomList';
 
 export interface RouteDefinition {
   component: string;
   payload: any;
 }
-
 
 class App extends Component {
   private readonly database: firebase.database.Database;
@@ -22,22 +21,7 @@ class App extends Component {
     localStorage.setItem('myPresenceKey', this.myPresenceKey);
   }
 
-
-  private renderPage = (route: RouteDefinition, navigator?: Navigator) => {
-    const {component, payload} = route;
-    switch (component) {
-      case 'RoomList': {
-        return <RoomList database={this.database} navigator={navigator}/>
-      } case 'RoomDetail': {
-        return <RoomDetail myPresenceKey={this.myPresenceKey} roomKey={payload.roomKey} myName={payload.myName}
-                           database={this.database} navigator={navigator}/>
-      } default: {
-        throw new Error('no matching root.')
-      }
-    }
-  };
-
-  render() {
+  public render() {
     return (
       <Navigator
         renderPage={this.renderPage}
@@ -47,6 +31,29 @@ class App extends Component {
       />
     );
   }
+
+  private renderPage = (route: RouteDefinition, navigator?: Navigator) => {
+    const { component, payload } = route;
+    switch (component) {
+      case 'RoomList': {
+        return <RoomList database={this.database} navigator={navigator} />;
+      }
+      case 'RoomDetail': {
+        return (
+          <RoomDetail
+            myPresenceKey={this.myPresenceKey}
+            roomKey={payload.roomKey}
+            myName={payload.myName}
+            database={this.database}
+            navigator={navigator}
+          />
+        );
+      }
+      default: {
+        throw new Error('no matching root.');
+      }
+    }
+  };
 }
 
 export default App;
