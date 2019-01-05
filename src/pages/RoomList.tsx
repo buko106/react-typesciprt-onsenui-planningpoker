@@ -12,9 +12,10 @@ import {
   Modal,
   Navigator,
   Page,
+  Toast,
   Toolbar,
 } from 'react-onsenui';
-import { interval, Subscription } from 'rxjs';
+import { interval, Subscription, timer } from 'rxjs';
 import { RouteDefinition } from '../App';
 import { Room } from '../object-types/object-types';
 import { getTimeOffsetFromDatabaseAsync } from './utils';
@@ -34,9 +35,12 @@ interface RoomStats {
 interface State {
   rooms: RoomStats[] | undefined;
   isModalOpen: boolean;
+  isToastOpen: boolean;
   newRoomName: string;
   userName: string;
 }
+
+const ROOM_INACTIVITY_THRESHOLD_MILLISECOND = 1000 * 60; // 1 min.  TODO: fix duplication of definition
 
 export default class RoomList extends Component<Props, State> {
   private readonly roomsRef: firebase.database.Reference;
@@ -48,6 +52,7 @@ export default class RoomList extends Component<Props, State> {
     this.state = {
       rooms: undefined,
       isModalOpen: false,
+      isToastOpen: false,
       newRoomName: '',
       userName: localStorage.getItem('myName') || '',
     };
@@ -63,7 +68,6 @@ export default class RoomList extends Component<Props, State> {
       this.props.database
     );
 
-    const ROOM_INACTIVITY_THRESHOLD_MILLISECOND = 3 * 60 * 1000; // 3 min.
     this.roomsRef
       .startAt(
         new Date().getTime() +
@@ -113,6 +117,7 @@ export default class RoomList extends Component<Props, State> {
   }
 
   public componentWillUnmount() {
+    this.roomsRef.off();
     if (this.forceUpdateSubscription) {
       this.forceUpdateSubscription.unsubscribe();
     }
@@ -134,6 +139,7 @@ export default class RoomList extends Component<Props, State> {
               </Fab>
             )}
             {this.renderNewRoomModal()}
+            {this.renderToast()}
           </>
         )}
       >
@@ -153,6 +159,12 @@ export default class RoomList extends Component<Props, State> {
         myName: this.state.userName,
       },
     };
+
+    if (this.state.userName === '') {
+      this.setState({ isToastOpen: true });
+      timer(1000).subscribe(() => this.setState({ isToastOpen: false }));
+      return;
+    }
     await this.props.navigator!.pushPage(route);
   }
 
@@ -161,7 +173,16 @@ export default class RoomList extends Component<Props, State> {
 
     if (rooms == null) {
       return <ListItem key="loading">Loading...</ListItem>;
-    } else if (rooms.length === 0) {
+    }
+
+    const serverTimestamp = new Date().getTime() + this.serverTimeOffset; // TODO: make server timestamp singleton object
+
+    const activeRooms = rooms.filter(
+      room =>
+        room.lastSeenAt >=
+        serverTimestamp - ROOM_INACTIVITY_THRESHOLD_MILLISECOND
+    );
+    if (rooms.length === 0) {
       return (
         <>
           <ListHeader>ACTIVE ROOMS</ListHeader>
@@ -173,18 +194,28 @@ export default class RoomList extends Component<Props, State> {
     return (
       <>
         <ListHeader>ACTIVE ROOMS</ListHeader>
-        {rooms.map((room: RoomStats) => {
-          return (
-            <ListItem
-              key={room.key}
-              onClick={() => {
-                this.onClickRoom(room.key);
-              }}
-            >
-              {room.name} / {room.activeMemberCount}人
-            </ListItem>
-          );
-        })}
+        {rooms
+          .filter(
+            room =>
+              room.lastSeenAt >=
+              serverTimestamp - ROOM_INACTIVITY_THRESHOLD_MILLISECOND
+          )
+          .map((room: RoomStats) => {
+            return (
+              <ListItem
+                key={room.key}
+                onClick={() => {
+                  this.onClickRoom(room.key);
+                }}
+              >
+                {room.name} / {room.activeMemberCount}人
+                <Icon
+                  style={{ position: 'absolute', right: 10 }}
+                  icon="fa-angle-right"
+                />
+              </ListItem>
+            );
+          })}
       </>
     );
   }
@@ -256,6 +287,12 @@ export default class RoomList extends Component<Props, State> {
           />
         </ListItem>
       </>
+    );
+  }
+
+  private renderToast() {
+    return (
+      <Toast isOpen={this.state.isToastOpen}>名前を設定してください。</Toast>
     );
   }
 
