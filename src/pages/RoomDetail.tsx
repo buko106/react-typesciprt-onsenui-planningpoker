@@ -36,7 +36,7 @@ interface Props {
 }
 
 interface State {
-  activeMembers: MemberStats[];
+  activeMembers?: MemberStats[];
   roomName: string;
   revealed: boolean;
 }
@@ -58,6 +58,8 @@ export default class RoomDetail extends Component<Props, State> {
   }
 
   public async componentDidMount() {
+    const { database, isObserver, myName } = this.props;
+
     this.roomRef.child('name').on('value', snapshot => {
       if (snapshot == null) {
         return;
@@ -98,22 +100,20 @@ export default class RoomDetail extends Component<Props, State> {
         this.setState({ activeMembers });
       });
 
-    this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(
-      this.props.database
-    );
+    this.serverTimeOffset = await getTimeOffsetFromDatabaseAsync(database);
 
     await this.myPresenceRef.remove();
-    if (!this.props.isObserver) {
+    if (!isObserver) {
       await this.myPresenceRef.set({
         last_seen_at: firebase.database.ServerValue.TIMESTAMP,
         joined_at: firebase.database.ServerValue.TIMESTAMP,
-        display_name: this.props.myName,
+        display_name: myName,
         card_choice: '',
       });
     }
 
     this.intervalSubscription = interval(1000).subscribe(() => {
-      if (!this.props.isObserver) {
+      if (!isObserver) {
         this.myPresenceRef.update({
           last_seen_at: firebase.database.ServerValue.TIMESTAMP,
         });
@@ -199,16 +199,22 @@ export default class RoomDetail extends Component<Props, State> {
     );
   }
   private renderList() {
-    const loading = () => (
-      <List>
-        <ListItem>読み込み中...</ListItem>
-      </List>
-    );
-
     const { activeMembers, revealed } = this.state;
 
+    if (activeMembers == null) {
+      return (
+        <List>
+          <ListItem>読み込み中...</ListItem>
+        </List>
+      );
+    }
+
     if (activeMembers.length === 0) {
-      return loading();
+      return (
+        <List>
+          <ListItem>メンバーがいません</ListItem>
+        </List>
+      );
     }
 
     return (
@@ -235,6 +241,7 @@ export default class RoomDetail extends Component<Props, State> {
     const { activeMembers, revealed } = this.state;
     const isToastOpen: boolean =
       !revealed &&
+      !!activeMembers &&
       activeMembers.length > 0 &&
       activeMembers.every(member => !!member.card_choice);
     return (
