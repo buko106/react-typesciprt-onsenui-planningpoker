@@ -34,6 +34,7 @@ interface RoomStats {
 
 interface State {
   rooms: RoomStats[] | undefined;
+  isObserver: boolean;
   isModalOpen: boolean;
   isToastOpen: boolean;
   newRoomName: string;
@@ -51,6 +52,7 @@ export default class RoomList extends Component<Props, State> {
     super(props);
     this.state = {
       rooms: undefined,
+      isObserver: false,
       isModalOpen: false,
       isToastOpen: false,
       newRoomName: '',
@@ -157,6 +159,7 @@ export default class RoomList extends Component<Props, State> {
       payload: {
         roomKey: key,
         myName: this.state.userName,
+        isObserver: this.state.isObserver,
       },
     };
 
@@ -220,9 +223,17 @@ export default class RoomList extends Component<Props, State> {
     );
   }
 
+  private toggleIsObserver = () => {
+    this.setState({
+      isObserver: !this.state.isObserver,
+    });
+  };
+
   private renderToolbar = () => (
     <Toolbar>
-      <div className="center">Room List</div>
+      <div className="center" onClick={this.toggleIsObserver}>
+        Room List {this.state.isObserver ? <span>(観戦モード)</span> : null}
+      </div>
     </Toolbar>
   );
 

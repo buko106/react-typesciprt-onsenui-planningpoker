@@ -30,6 +30,7 @@ interface Props {
   roomKey: string;
   myPresenceKey: string;
   myName: string;
+  isObserver: boolean;
   database: firebase.database.Database;
   navigator?: Navigator;
 }
@@ -102,17 +103,21 @@ export default class RoomDetail extends Component<Props, State> {
     );
 
     await this.myPresenceRef.remove();
-    await this.myPresenceRef.set({
-      last_seen_at: firebase.database.ServerValue.TIMESTAMP,
-      joined_at: firebase.database.ServerValue.TIMESTAMP,
-      display_name: this.props.myName,
-      card_choice: '',
-    });
+    if (!this.props.isObserver) {
+      await this.myPresenceRef.set({
+        last_seen_at: firebase.database.ServerValue.TIMESTAMP,
+        joined_at: firebase.database.ServerValue.TIMESTAMP,
+        display_name: this.props.myName,
+        card_choice: '',
+      });
+    }
 
     this.intervalSubscription = interval(1000).subscribe(() => {
-      this.myPresenceRef.update({
-        last_seen_at: firebase.database.ServerValue.TIMESTAMP,
-      });
+      if (!this.props.isObserver) {
+        this.myPresenceRef.update({
+          last_seen_at: firebase.database.ServerValue.TIMESTAMP,
+        });
+      }
       this.roomRef.update({
         last_seen_at: firebase.database.ServerValue.TIMESTAMP,
       });

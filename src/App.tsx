@@ -44,6 +44,7 @@ class App extends Component {
             myPresenceKey={this.myPresenceKey}
             roomKey={payload.roomKey}
             myName={payload.myName}
+            isObserver={payload.isObserver}
             database={this.database}
             navigator={navigator}
           />
