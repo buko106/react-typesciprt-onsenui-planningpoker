@@ -246,11 +246,11 @@ export default class RoomDetail extends Component<Props, State> {
       activeMembers.every(member => !!member.card_choice);
     return (
       <>
-        <Toast isOpen={isToastOpen}>
+        <Toast isOpen={true} style={{visibility: isToastOpen ? 'visible' : 'hidden'}}>
           All Members Ready!
           <button onClick={() => this.revealChoices()}>GO</button>
         </Toast>
-        <Toast isOpen={!!revealed}>
+        <Toast isOpen={true} style={{visibility: revealed ? 'visible' : 'hidden'}}>
           <button onClick={() => this.resetAllChoices()}>RESET</button>
         </Toast>
       </>
