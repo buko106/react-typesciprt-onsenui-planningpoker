@@ -223,13 +223,18 @@ export default class RoomDetail extends Component<Props, State> {
           const cardChoice = member.card_choice;
           let label: string;
           if (CARD_CHOICES.indexOf(cardChoice) !== -1) {
-            label = revealed ? card2component[cardChoice] : 'ready!';
+            label = revealed ? `${card2component[cardChoice]} point` : 'ready!';
           } else {
             label = revealed ? '(not specified)' : 'not ready';
           }
           return (
             <ListItem key={member.key}>
-              {label} / {member.display_name}
+              <div className="left">
+                {member.display_name}
+              </div>
+              <div className="center">
+                {label}
+              </div>
             </ListItem>
           );
         })}

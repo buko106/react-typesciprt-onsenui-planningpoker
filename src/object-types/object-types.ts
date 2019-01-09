@@ -1,11 +1,12 @@
 export const card2component = {
   zero: '0',
-  half: '0.5',
+  half: '1/2',
   one: '1',
   two: '2',
   three: '3',
   five: '5',
   eight: '8',
+  question_mark: '?',
 };
 
 export type CardChoice = keyof typeof card2component;
