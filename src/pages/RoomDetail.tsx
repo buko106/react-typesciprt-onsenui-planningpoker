@@ -228,7 +228,7 @@ export default class RoomDetail extends Component<Props, State> {
             label = revealed ? '(not specified)' : 'not ready';
           }
           return (
-            <ListItem key={member.key}>
+            <ListItem key={member.key} modifier="longdivider">
               <div className="left">
                 {member.display_name}
               </div>
