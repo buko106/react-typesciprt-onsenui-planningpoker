@@ -20,7 +20,10 @@ import {
   CardChoice,
   Member,
 } from '../object-types/object-types';
-import { getTimeOffsetFromDatabaseAsync } from './utils';
+import {
+  generatePermanentLinkFromRoomKey,
+  getTimeOffsetFromDatabaseAsync,
+} from './utils';
 
 interface MemberStats extends Member {
   key: string;
@@ -55,6 +58,11 @@ export default class RoomDetail extends Component<Props, State> {
     const { database, roomKey, myPresenceKey } = props;
     this.roomRef = database.ref(`/rooms/${roomKey}`);
     this.myPresenceRef = this.roomRef.child(`members/${myPresenceKey}`);
+    console.log(
+      `[TODO] This is a permanent link of this room -> ${generatePermanentLinkFromRoomKey(
+        roomKey
+      )}`
+    );
   }
 
   public async componentDidMount() {
@@ -229,12 +237,8 @@ export default class RoomDetail extends Component<Props, State> {
           }
           return (
             <ListItem key={member.key} modifier="longdivider">
-              <div className="left">
-                {member.display_name}
-              </div>
-              <div className="center">
-                {label}
-              </div>
+              <div className="left">{member.display_name}</div>
+              <div className="center">{label}</div>
             </ListItem>
           );
         })}
@@ -251,11 +255,17 @@ export default class RoomDetail extends Component<Props, State> {
       activeMembers.every(member => !!member.card_choice);
     return (
       <>
-        <Toast isOpen={true} style={{visibility: isToastOpen ? 'visible' : 'hidden'}}>
+        <Toast
+          isOpen={true}
+          style={{ visibility: isToastOpen ? 'visible' : 'hidden' }}
+        >
           All Members Ready!
           <button onClick={() => this.revealChoices()}>GO</button>
         </Toast>
-        <Toast isOpen={true} style={{visibility: revealed ? 'visible' : 'hidden'}}>
+        <Toast
+          isOpen={true}
+          style={{ visibility: revealed ? 'visible' : 'hidden' }}
+        >
           <button onClick={() => this.resetAllChoices()}>RESET</button>
         </Toast>
       </>

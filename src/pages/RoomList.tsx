@@ -70,6 +70,11 @@ export default class RoomList extends Component<Props, State> {
       this.props.database
     );
 
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('room_key')) {
+      this.onClickRoom(url.searchParams.get('room_key')!);
+    }
+
     this.roomsRef
       .startAt(
         new Date().getTime() +
