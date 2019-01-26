@@ -249,7 +249,7 @@ export default class RoomDetail extends Component<Props, State> {
           return (
             <ListItem key={member.key} modifier="longdivider">
               <div className="left">{member.display_name}</div>
-              <div className="center">{label}</div>
+              <div className="right">{label}</div>
             </ListItem>
           );
         })}
