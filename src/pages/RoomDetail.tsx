@@ -225,9 +225,20 @@ export default class RoomDetail extends Component<Props, State> {
       );
     }
 
+    let sortedActiveMembers = activeMembers;
+    if (revealed) {
+      sortedActiveMembers = activeMembers
+        .slice()
+        .sort(
+          (a: MemberStats, b: MemberStats) =>
+            CARD_CHOICES.indexOf(a.card_choice) -
+            CARD_CHOICES.indexOf(b.card_choice)
+        )
+        .reverse();
+    }
     return (
       <List>
-        {activeMembers.map((member: MemberStats) => {
+        {sortedActiveMembers.map((member: MemberStats) => {
           const cardChoice = member.card_choice;
           let label: string;
           if (CARD_CHOICES.indexOf(cardChoice) !== -1) {
