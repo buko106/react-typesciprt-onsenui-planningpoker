@@ -5,6 +5,7 @@ import {
   Fab,
   Icon,
   List,
+  ListHeader,
   ListItem,
   Navigator,
   Page,
@@ -238,6 +239,12 @@ export default class RoomDetail extends Component<Props, State> {
     }
     return (
       <List>
+        {revealed ? (
+          <ListItem onClick={() => this.resetAllChoices()}>
+            リセットはここを押してね
+          </ListItem>
+        ) : null}
+        <ListHeader>Members</ListHeader>
         {sortedActiveMembers.map((member: MemberStats) => {
           const cardChoice = member.card_choice;
           let label: string;
@@ -272,12 +279,6 @@ export default class RoomDetail extends Component<Props, State> {
         >
           All Members Ready!
           <button onClick={() => this.revealChoices()}>GO</button>
-        </Toast>
-        <Toast
-          isOpen={true}
-          style={{ visibility: revealed ? 'visible' : 'hidden' }}
-        >
-          <button onClick={() => this.resetAllChoices()}>RESET</button>
         </Toast>
       </>
     );
